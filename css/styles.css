@@ -1,0 +1,172 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: #0f172a;
+  color: #e5e7eb;
+}
+
+.app-header {
+  text-align: center;
+  padding: 1rem;
+  background: #020617;
+  border-bottom: 1px solid #1f2937;
+}
+
+.subtitle {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: #9ca3af;
+}
+
+.offline-banner {
+  background: #b91c1c;
+  color: white;
+  padding: 0.5rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+main {
+  padding: 1rem;
+  padding-bottom: 4rem; /* miejsce na bottom-nav */
+}
+
+.view {
+  display: none;
+}
+
+.view--active {
+  display: block;
+}
+
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: #020617;
+  border-top: 1px solid #1f2937;
+}
+
+.nav-btn {
+  flex: 1;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+}
+
+.nav-btn--active {
+  color: #f97316;
+  border-top: 2px solid #f97316;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  background: #111827;
+  padding: 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #1f2937;
+}
+
+.card h3 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.list-item {
+  background: #111827;
+  padding: 0.75rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid #1f2937;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 0.4rem 0.8rem;
+  border: none;
+  background: #f97316;
+  color: #111827;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"] {
+  padding: 0.4rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* Scanner video */
+#scanner-container {
+  margin-top: 0.5rem;
+}
+
+#video {
+  width: 100%;
+  max-height: 240px;
+  background: black;
+  border-radius: 0.75rem;
+}
+
+/* Prostą responsywność na większych ekranach */
+@media (min-width: 768px) {
+  main {
+    max-width: 800px;
+    margin: 0 auto 4rem;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}

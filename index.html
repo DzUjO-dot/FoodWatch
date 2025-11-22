@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <title>PantryPWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Manifest PWA -->
+  <link rel="manifest" href="manifest.webmanifest" />
+
+  <!-- Podstawowe style -->
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Kolory dla przeglądarki -->
+  <meta name="theme-color" content="#1e293b" />
+</head>
+<body>
+  <header class="app-header">
+    <h1>PantryPWA</h1>
+    <p class="subtitle">Twoja domowa spiżarnia w przeglądarce</p>
+  </header>
+
+  <!-- Banner offline -->
+  <div id="offline-banner" class="offline-banner" hidden>
+    Jesteś offline – działasz w trybie offline. Niektóre funkcje (API) mogą być niedostępne.
+  </div>
+
+  <!-- Nawigacja (spójne flow między widokami) -->
+  <nav class="bottom-nav">
+    <button data-view="dashboard" class="nav-btn nav-btn--active">Dashboard</button>
+    <button data-view="pantry" class="nav-btn">Spiżarnia</button>
+    <button data-view="scanner" class="nav-btn">Skanuj</button>
+    <button data-view="shopping" class="nav-btn">Zakupy</button>
+  </nav>
+
+  <!-- Widoki -->
+  <main>
+    <!-- Widok 1: Dashboard -->
+    <section id="view-dashboard" class="view view--active">
+      <h2>Dashboard</h2>
+      <div class="card-grid">
+        <div class="card">
+          <h3>Produkty w spiżarni</h3>
+          <p id="stat-total">0</p>
+        </div>
+        <div class="card">
+          <h3>Zbliżający się koniec terminu</h3>
+          <p id="stat-soon-expiring">0</p>
+        </div>
+        <div class="card">
+          <h3>Przeterminowane</h3>
+          <p id="stat-expired">0</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Widok 2: Spiżarnia -->
+    <section id="view-pantry" class="view">
+      <h2>Spiżarnia</h2>
+
+      <div class="filters">
+        <label>
+          Lokalizacja:
+          <input type="text" id="filter-location" placeholder="np. A3, E10..." />
+        </label>
+        <button id="btn-apply-filter">Filtruj</button>
+      </div>
+
+      <ul id="pantry-list" class="list"></ul>
+    </section>
+
+    <!-- Widok 3: Skaner / Dodawanie produktu -->
+    <section id="view-scanner" class="view">
+      <h2>Dodaj produkt</h2>
+
+      <div id="scanner-container">
+        <video id="video" autoplay playsinline></video>
+        <p id="scanner-info">
+          Skaner używa kamery tylniej (BarcodeDetector, jeśli dostępny). 
+          Na iOS może być wymagane ręczne wpisanie kodu.
+        </p>
+        <button id="btn-start-scan">Uruchom skaner</button>
+        <button id="btn-stop-scan" disabled>Zatrzymaj skaner</button>
+      </div>
+
+      <div class="form">
+        <label>
+          Kod kreskowy:
+          <input type="text" id="input-barcode" placeholder="Lub wpisz ręcznie" />
+        </label>
+        <button id="btn-fetch-product">Pobierz z OpenFoodFacts</button>
+
+        <label>
+          Nazwa produktu:
+          <input type="text" id="input-name" />
+        </label>
+        <label>
+          Marka:
+          <input type="text" id="input-brand" />
+        </label>
+        <label>
+          Data ważności:
+          <input type="date" id="input-expiry" />
+        </label>
+        <label>
+          Ilość:
+          <input type="number" id="input-quantity" min="1" value="1" />
+        </label>
+        <label>
+          Lokalizacja (np. A3, E3, E10):
+          <input type="text" id="input-location" />
+        </label>
+
+        <button id="btn-save-product">Zapisz produkt</button>
+      </div>
+    </section>
+
+    <!-- Widok 4: Lista zakupów -->
+    <section id="view-shopping" class="view">
+      <h2>Lista zakupów</h2>
+      <ul id="shopping-list" class="list"></ul>
+    </section>
+  </main>
+
+  <!-- Skrypty -->
+  <script src="js/db.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/scanner.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
