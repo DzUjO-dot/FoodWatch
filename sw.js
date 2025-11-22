@@ -1,16 +1,15 @@
 // sw.js
-
-const CACHE_NAME = 'pantry-cache-v1';
+const CACHE_NAME = 'foodwatch-cache-v2';
 const OFFLINE_URLS = [
-  '/',
-  '/index.html',
-  '/css/styles.css',
-  '/js/app.js',
-  '/js/db.js',
-  '/js/scanner.js',
-  '/js/notifications.js',
-  '/img/icon-192.png',
-  '/img/icon-512.png'
+  'index.html',
+  'css/styles.css',
+  'js/app.js',
+  'js/db.js',
+  'js/scanner.js',
+  'js/notifications.js',
+  'js/aiPriceAgent.js',
+  'img/icon-192.png',
+  'img/icon-512.png'
 ];
 
 self.addEventListener('install', event => {
@@ -23,9 +22,9 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   console.log('[SW] Activate');
   event.waitUntil(
-    caches.keys().then(keys => 
+    caches.keys().then(keys =>
       Promise.all(
-        keys.map(key => key !== CACHE_NAME ? caches.delete(key) : null)
+        keys.map(key => (key !== CACHE_NAME ? caches.delete(key) : null))
       )
     )
   );
@@ -43,7 +42,7 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Inne – cache-first
+  // Reszta – cache-first
   event.respondWith(
     caches.match(event.request).then(response => {
       return (
@@ -59,16 +58,17 @@ self.addEventListener('fetch', event => {
   );
 });
 
-// Obsługa powiadomień (Notifications API)
 self.addEventListener('notificationclick', event => {
   event.notification.close();
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientsArr => {
-      if (clientsArr.length > 0) {
-        clientsArr[0].focus();
-      } else {
-        clients.openWindow('/');
-      }
-    })
+    clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then(clientsArr => {
+        if (clientsArr.length > 0) {
+          return clientsArr[0].focus();
+        } else {
+          return clients.openWindow('./');
+        }
+      })
   );
 });

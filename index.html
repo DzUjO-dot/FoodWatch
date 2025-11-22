@@ -2,130 +2,348 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8" />
-  <title>PantryPWA</title>
+  <title>FoodWatch</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <!-- Manifest PWA -->
+  <meta name="theme-color" content="#f3f4f6" />
   <link rel="manifest" href="manifest.webmanifest" />
-
-  <!-- Podstawowe style -->
   <link rel="stylesheet" href="css/styles.css" />
-
-  <!-- Kolory dla przeglądarki -->
-  <meta name="theme-color" content="#1e293b" />
 </head>
 <body>
-  <header class="app-header">
-    <h1>PantryPWA</h1>
-    <p class="subtitle">Twoja domowa spiżarnia w przeglądarce</p>
-  </header>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="app-header-inner">
+        <div class="app-title-block">
+          <span class="app-logo-circle">FW</span>
+          <div>
+            <h1>FoodWatch</h1>
+            <p class="subtitle">Sprytna kontrola domowej spiżarni</p>
+          </div>
+        </div>
+      </div>
+    </header>
 
-  <!-- Banner offline -->
-  <div id="offline-banner" class="offline-banner" hidden>
-    Jesteś offline – działasz w trybie offline. Niektóre funkcje (API) mogą być niedostępne.
+    <div id="offline-banner" class="offline-banner" hidden>
+      Jesteś offline – działasz w trybie offline. Dane lokalne są nadal dostępne.
+    </div>
+
+    <main class="app-main">
+      <!-- Dashboard -->
+      <section id="view-dashboard" class="view view--active">
+        <header class="page-header">
+          <div>
+            <h2>Dashboard</h2>
+            <p class="page-subtitle">
+              Podsumowanie stanu spiżarni, alertów i ryzyka przeterminowania.
+            </p>
+          </div>
+        </header>
+
+        <div class="card-grid">
+          <div class="card card--stat">
+            <h3>Produkty w spiżarni</h3>
+            <p class="stat-value" id="stat-total">0</p>
+          </div>
+          <div class="card card--stat">
+            <h3>Zbliżający się koniec terminu</h3>
+            <p class="stat-value" id="stat-soon-expiring">0</p>
+            <p class="stat-hint">≤ 3 dni do końca</p>
+          </div>
+          <div class="card card--stat card--danger">
+            <h3>Przeterminowane</h3>
+            <p class="stat-value" id="stat-expired">0</p>
+          </div>
+          <div class="card card--risk">
+            <h3>Wskaźnik ryzyka</h3>
+            <p class="stat-text">
+              <span id="stat-risk-percentage">0%</span> produktów wymaga uwagi
+            </p>
+            <div class="progress">
+              <div class="progress-bar" id="risk-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <section class="section">
+          <div class="section-header">
+            <h3>Ostatnie alerty</h3>
+            <button id="btn-refresh-dashboard" class="btn-secondary">Odśwież</button>
+          </div>
+          <ul id="alert-history-list" class="list list--compact"></ul>
+        </section>
+
+        <section class="section">
+          <button id="btn-toggle-info" class="btn-info">
+            Jak działa FoodWatch?
+          </button>
+          <div id="info-panel" class="info-panel" hidden>
+            <p>
+              FoodWatch to progresywna aplikacja webowa (PWA), która pomaga
+              zarządzać domową spiżarnią.
+            </p>
+            <ul>
+              <li>Skanuje kody kreskowe produktów za pomocą kamery.</li>
+              <li>Pobiera nazwy z OpenFoodFacts lub pozwala wpisać je ręcznie.</li>
+              <li>Śledzi daty ważności, ilość i lokalizację na półkach.</li>
+              <li>Działa w trybie offline dzięki Service Worker + IndexedDB.</li>
+              <li>Powiadamia o produktach przeterminowanych lub blisko terminu.</li>
+              <li>Zużyte / przeterminowane produkty trafiają na listę zakupów.</li>
+            </ul>
+          </div>
+        </section>
+      </section>
+
+      <!-- Spiżarnia -->
+      <section id="view-pantry" class="view">
+        <header class="page-header">
+          <div>
+            <h2>Spiżarnia</h2>
+            <p class="page-subtitle">
+              Lista wszystkich produktów z datami ważności, ilością i lokalizacją.
+            </p>
+          </div>
+        </header>
+
+        <div class="card card--filters">
+          <div class="filters">
+            <label class="filter-field">
+              <span>Lokalizacja</span>
+              <input type="text" id="filter-location" placeholder="np. A3, E10..." />
+            </label>
+            <label class="filter-field">
+              <span>Szukaj</span>
+              <input type="text" id="filter-search" placeholder="nazwa lub marka" />
+            </label>
+            <label class="filter-field">
+              <span>Sortowanie</span>
+              <select id="filter-sort">
+                <option value="expiry-asc">Data ważności (rosnąco)</option>
+                <option value="name-asc">Nazwa (A–Z)</option>
+                <option value="location-asc">Lokalizacja</option>
+              </select>
+            </label>
+            <button id="btn-apply-filter" class="btn-secondary btn-secondary--full">
+              Zastosuj
+            </button>
+          </div>
+        </div>
+
+        <div class="card card--list">
+          <ul id="pantry-list" class="list"></ul>
+        </div>
+      </section>
+
+      <!-- Skaner / Dodawanie -->
+      <section id="view-scanner" class="view">
+        <header class="page-header">
+          <div>
+            <h2>Dodaj lub edytuj produkt</h2>
+            <p class="page-subtitle">
+              Skanuj kod, wyszukaj w OpenFoodFacts albo uzupełnij ręcznie.
+            </p>
+          </div>
+          <p id="edit-hint" class="edit-hint" hidden>
+            Tryb edycji: zapis nadpisze istniejący produkt.
+          </p>
+        </header>
+
+        <p class="hint">
+          Na przeglądarkach bez wsparcia BarcodeDetector (np. Safari na iOS)
+          możesz korzystać z wyszukiwarki i ręcznego wpisywania.
+        </p>
+
+        <div class="form-layout">
+          <!-- Kolumna: skaner + wyszukiwarka -->
+          <div class="form-column">
+            <div class="card">
+              <div id="scanner-container">
+                <div class="video-shell">
+                  <video id="video" autoplay playsinline></video>
+                  <div class="video-overlay">
+                    <div class="video-frame"></div>
+                    <span class="video-hint">Ustaw kod kreskowy w ramce</span>
+                  </div>
+                </div>
+                <p id="scanner-info">
+                  Skaner używa kamery tylnej (BarcodeDetector, jeśli dostępny).
+                  Jeżeli Twoja przeglądarka nie wspiera tego API, przycisk
+                  „Uruchom skaner” może być niedostępny.
+                </p>
+                <div class="scanner-actions">
+                  <button id="btn-start-scan" class="btn-primary">Uruchom skaner</button>
+                  <button id="btn-stop-scan" class="btn-secondary" disabled>
+                    Zatrzymaj skaner
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <!-- Wyszukiwarka produktów w OpenFoodFacts -->
+              <div class="search-existing">
+                <label>
+                  Wyszukaj produkt w OpenFoodFacts (po nazwie):
+                  <input
+                    type="text"
+                    id="input-search-existing"
+                    placeholder="np. „Mleko Łaciate 3.2%”"
+                  />
+                </label>
+                <ul
+                  id="search-existing-results"
+                  class="list list--compact search-results"
+                ></ul>
+              </div>
+            </div>
+          </div>
+
+          <!-- Kolumna: formularz produktu -->
+          <div class="form-column">
+            <div class="card card--form">
+              <h3 class="form-title">Szczegóły produktu</h3>
+              <div class="form">
+                <label>
+                  Kod kreskowy
+                  <input type="text" id="input-barcode" placeholder="Skanuj lub wpisz ręcznie" />
+                </label>
+                <button id="btn-fetch-product" class="btn-secondary">
+                  Pobierz dane z OpenFoodFacts
+                </button>
+
+                <div class="form-two-columns">
+                  <label>
+                    Nazwa produktu
+                    <input type="text" id="input-name" placeholder="np. Mleko 3.2% Łaciate" />
+                  </label>
+                  <label>
+                    Marka
+                    <input type="text" id="input-brand" placeholder="np. Łaciate" />
+                  </label>
+                </div>
+
+                <div class="form-two-columns">
+                  <label>
+                    Data ważności
+                    <input type="date" id="input-expiry" />
+                  </label>
+                  <label>
+                    Ilość
+                    <input type="number" id="input-quantity" min="1" value="1" />
+                  </label>
+                </div>
+
+                <label>
+                  Lokalizacja (np. A3, E3, E10)
+                  <input type="text" id="input-location" placeholder="Twoja logika półek" />
+                </label>
+
+                <button id="btn-save-product" class="btn-primary btn-primary--full">
+                  Zapisz produkt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lista zakupów -->
+      <section id="view-shopping" class="view">
+        <header class="page-header">
+          <div>
+            <h2>Lista zakupów</h2>
+            <p class="page-subtitle">
+              Produkty trafiają tutaj automatycznie z FoodWatch lub ręcznie.
+            </p>
+          </div>
+        </header>
+
+        <!-- Karta z agentem AI -->
+        <section class="section">
+          <div class="card card--stat card--ai">
+            <h3>Szacunkowy koszt (pseudo-AI) – ostatnie 7 dni</h3>
+            <p class="stat-value" id="ai-cost-value">~ 0 zł</p>
+            <p class="stat-hint" id="ai-cost-hint">
+              Na podstawie nazw produktów z sekcji „Kupione (ostatnie 7 dni)”.
+            </p>
+          </div>
+        </section>
+
+        <!-- Dashboard kategorii (AI) -->
+        <section class="section">
+          <div class="section-header">
+            <h3>Struktura koszyka według kategorii</h3>
+          </div>
+          <div id="ai-category-grid" class="card-grid ai-category-grid"></div>
+        </section>
+
+        <div class="card card--toolbar">
+          <div class="shopping-toolbar">
+            <button id="btn-share-shopping" class="btn-secondary">
+              Udostępnij listę
+            </button>
+            <button id="btn-find-stores" class="btn-secondary">
+              Sklepy w pobliżu
+            </button>
+            <button id="btn-clear-done" class="btn-small">
+              Wyczyść kupione
+            </button>
+          </div>
+          <p id="shopping-offline-hint" class="hint" hidden>
+            Jesteś offline – mapa sklepów i udostępnianie listy mogą być niedostępne,
+            ale Twoja lista zakupów nadal działa w trybie offline.
+          </p>
+        </div>
+
+        <section class="section">
+          <h3 class="shopping-section-title">Do kupienia</h3>
+          <div class="card card--list">
+            <ul id="shopping-list-pending" class="list"></ul>
+          </div>
+        </section>
+
+        <section class="section">
+          <h3 class="shopping-section-title">Kupione (ostatnie 7 dni)</h3>
+          <div class="card card--list">
+            <ul id="shopping-list-done" class="list list--compact"></ul>
+          </div>
+        </section>
+      </section>
+
+      <!-- Historia działań -->
+      <section id="view-history" class="view">
+        <header class="page-header">
+          <div>
+            <h2>Historia działań</h2>
+            <p class="page-subtitle">
+              Log dodawania, edycji, usuwania, zużycia oraz zmian na liście zakupów.
+            </p>
+          </div>
+        </header>
+
+        <div class="card card--list">
+          <ul id="history-list" class="list list--compact"></ul>
+        </div>
+
+        <section class="section">
+          <button id="btn-export-data" class="btn-secondary">
+            Eksportuj dane do JSON
+          </button>
+        </section>
+      </section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button data-view="dashboard" class="nav-btn nav-btn--active">Dashboard</button>
+      <button data-view="pantry" class="nav-btn">Spiżarnia</button>
+      <button data-view="scanner" class="nav-btn">Dodaj</button>
+      <button data-view="shopping" class="nav-btn">Zakupy</button>
+      <button data-view="history" class="nav-btn">Historia</button>
+    </nav>
   </div>
 
-  <!-- Nawigacja (spójne flow między widokami) -->
-  <nav class="bottom-nav">
-    <button data-view="dashboard" class="nav-btn nav-btn--active">Dashboard</button>
-    <button data-view="pantry" class="nav-btn">Spiżarnia</button>
-    <button data-view="scanner" class="nav-btn">Skanuj</button>
-    <button data-view="shopping" class="nav-btn">Zakupy</button>
-  </nav>
-
-  <!-- Widoki -->
-  <main>
-    <!-- Widok 1: Dashboard -->
-    <section id="view-dashboard" class="view view--active">
-      <h2>Dashboard</h2>
-      <div class="card-grid">
-        <div class="card">
-          <h3>Produkty w spiżarni</h3>
-          <p id="stat-total">0</p>
-        </div>
-        <div class="card">
-          <h3>Zbliżający się koniec terminu</h3>
-          <p id="stat-soon-expiring">0</p>
-        </div>
-        <div class="card">
-          <h3>Przeterminowane</h3>
-          <p id="stat-expired">0</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- Widok 2: Spiżarnia -->
-    <section id="view-pantry" class="view">
-      <h2>Spiżarnia</h2>
-
-      <div class="filters">
-        <label>
-          Lokalizacja:
-          <input type="text" id="filter-location" placeholder="np. A3, E10..." />
-        </label>
-        <button id="btn-apply-filter">Filtruj</button>
-      </div>
-
-      <ul id="pantry-list" class="list"></ul>
-    </section>
-
-    <!-- Widok 3: Skaner / Dodawanie produktu -->
-    <section id="view-scanner" class="view">
-      <h2>Dodaj produkt</h2>
-
-      <div id="scanner-container">
-        <video id="video" autoplay playsinline></video>
-        <p id="scanner-info">
-          Skaner używa kamery tylniej (BarcodeDetector, jeśli dostępny). 
-          Na iOS może być wymagane ręczne wpisanie kodu.
-        </p>
-        <button id="btn-start-scan">Uruchom skaner</button>
-        <button id="btn-stop-scan" disabled>Zatrzymaj skaner</button>
-      </div>
-
-      <div class="form">
-        <label>
-          Kod kreskowy:
-          <input type="text" id="input-barcode" placeholder="Lub wpisz ręcznie" />
-        </label>
-        <button id="btn-fetch-product">Pobierz z OpenFoodFacts</button>
-
-        <label>
-          Nazwa produktu:
-          <input type="text" id="input-name" />
-        </label>
-        <label>
-          Marka:
-          <input type="text" id="input-brand" />
-        </label>
-        <label>
-          Data ważności:
-          <input type="date" id="input-expiry" />
-        </label>
-        <label>
-          Ilość:
-          <input type="number" id="input-quantity" min="1" value="1" />
-        </label>
-        <label>
-          Lokalizacja (np. A3, E3, E10):
-          <input type="text" id="input-location" />
-        </label>
-
-        <button id="btn-save-product">Zapisz produkt</button>
-      </div>
-    </section>
-
-    <!-- Widok 4: Lista zakupów -->
-    <section id="view-shopping" class="view">
-      <h2>Lista zakupów</h2>
-      <ul id="shopping-list" class="list"></ul>
-    </section>
-  </main>
-
-  <!-- Skrypty -->
   <script src="js/db.js"></script>
   <script src="js/notifications.js"></script>
   <script src="js/scanner.js"></script>
+  <script src="js/aiPriceAgent.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

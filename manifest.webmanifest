@@ -1,6 +1,6 @@
 {
-  "name": "PantryPWA",
-  "short_name": "Pantry",
+  "name": "FoodWatch",
+  "short_name": "FoodWatch",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#0f172a",
