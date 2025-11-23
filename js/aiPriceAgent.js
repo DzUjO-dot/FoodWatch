@@ -1,12 +1,6 @@
-// js/ai.js
-// Bardzo prosty „pseudo-AI” do szacowania kosztu koszyka na podstawie nazw produktów.
-// DZIAŁA CAŁKOWICIE LOKALNIE – bez zewnętrznego AI.
+// js/aiPriceAgent.js
+// Prosty „pseudo-AI” do szacowania kosztu koszyka i kategoryzacji produktów.
 
-// Każda reguła ma:
-// - category  – nazwa kategorii
-// - emoji     – ikonka do wyświetlenia
-// - keywords  – słowa kluczowe, po których dopasowujemy (szukane jako substring w nazwie)
-// - avgPrice  – szacunkowa cena za 1 sztukę (zł)
 const AI_PRICE_RULES = [
   {
     category: 'Nabiał',
@@ -19,11 +13,9 @@ const AI_PRICE_RULES = [
       'kefir',
       'maślanka',
       'śmietana',
-      'ser żółty',
-      'ser gouda',
-      'ser edam',
-      'ser cheddar',
-      'ser topiony',
+      'ser',
+      'gouda',
+      'cheddar',
       'twaróg',
       'serek wiejski',
       'serek homogenizowany',
@@ -38,12 +30,13 @@ const AI_PRICE_RULES = [
     keywords: [
       'chleb',
       'bułka',
+      'bułki',
       'bagietka',
       'kajzerka',
       'grahamka',
       'tost',
       'tostowy',
-      'rogalik (pieczywo)',
+      'rogal',
       'pita',
       'tortilla'
     ],
@@ -57,8 +50,7 @@ const AI_PRICE_RULES = [
       'pepsi',
       'fanta',
       'sprite',
-      'napój gazowany',
-      'napój niegazowany',
+      'napój',
       'sok',
       'nektar',
       'woda',
@@ -123,226 +115,139 @@ const AI_PRICE_RULES = [
       'banany',
       'gruszka',
       'gruszki',
-      'pomarańcza',
-      'mandarynka',
-      'mandarynki',
-      'cytryna',
       'truskawki',
-      'truskawka',
       'maliny',
-      'malina',
       'borówki',
-      'borówka',
-      'winogrona'
+      'winogrona',
+      'brzoskwinia',
+      'morela',
+      'śliwka'
     ],
     avgPrice: 4.0
   },
   {
-    category: 'Mięso i wędliny',
+    category: 'Mięso i ryby',
     emoji: '🥩',
     keywords: [
       'kurczak',
       'filet z kurczaka',
       'pierś z kurczaka',
-      'indyk',
-      'schab',
       'wołowina',
+      'schab',
       'wieprzowina',
       'karkówka',
-      'boczek',
-      'szynka',
-      'kiełbasa',
+      'ryba',
+      'łosoś',
+      'tuńczyk',
       'parówki',
-      'salami'
+      'kiełbasa'
     ],
-    avgPrice: 12.0
+    avgPrice: 15.0
   },
   {
-    category: 'Ryby i owoce morza',
-    emoji: '🐟',
+    category: 'Mrożonki',
+    emoji: '❄️',
     keywords: [
-      'łosoś',
-      'dorsz',
-      'mintaj',
-      'śledź',
-      'tuńczyk',
-      'makrela',
-      'paluszki rybne',
-      'krewetki'
+      'mrożone',
+      'mrożonka',
+      'pizza mrożona',
+      'frytki mrożone',
+      'mieszanka warzywna',
+      'lody'
     ],
     avgPrice: 10.0
   },
   {
-    category: 'Produkty suche',
+    category: 'Sucha żywność',
     emoji: '🍚',
     keywords: [
       'ryż',
       'makaron',
       'kasza',
-      'płatki owsiane',
-      'owsianka',
+      'płatki śniadaniowe',
       'mąka',
       'cukier',
-      'sól',
-      'bułka tarta',
-      'sos w proszku',
-      'zupa w proszku'
+      'sól'
     ],
-    avgPrice: 4.0
-  },
-  {
-    category: 'Konserwy i słoiki',
-    emoji: '🥫',
-    keywords: [
-      'konserwa',
-      'groszek konserwowy',
-      'fasola konserwowa',
-      'tuńczyk w puszce',
-      'pasztet',
-      'pomidory w puszce',
-      'ogórki konserwowe',
-      'dżem',
-      'powidła',
-      'miód'
-    ],
-    avgPrice: 6.0
-  },
-  {
-    category: 'Mrożonki',
-    emoji: '🧊',
-    keywords: [
-      'mrożona',
-      'mrożone',
-      'lody',
-      'pizza mrożona',
-      'warzywa mrożone',
-      'frytki mrożone',
-      'pierogi mrożone'
-    ],
-    avgPrice: 7.0
-  },
-  {
-    category: 'Chemia domowa',
-    emoji: '🧼',
-    keywords: [
-      'płyn do naczyń',
-      'płyn do prania',
-      'proszek do prania',
-      'płyn do płukania',
-      'płyn do podłóg',
-      'domestos',
-      'środek czyszczący',
-      'zmywarka tabletki',
-      'tabletki do zmywarki'
-    ],
-    avgPrice: 12.0
-  },
-  {
-    category: 'Higiena osobista',
-    emoji: '🧴',
-    keywords: [
-      'szampon',
-      'odżywka',
-      'żel pod prysznic',
-      'mydło',
-      'pasta do zębów',
-      'płyn do płukania jamy ustnej',
-      'dezodorant',
-      'antyperspirant',
-      'chusteczki higieniczne',
-      'papier toaletowy'
-    ],
-    avgPrice: 8.0
+    avgPrice: 5.5
   },
   {
     category: 'Inne',
     emoji: '🛒',
-    keywords: [
-      'przyprawa',
-      'przyprawy',
-      'ketchup',
-      'majonez',
-      'musztarda',
-      'olej',
-      'oliwa',
-      'ocet',
-      'kawa',
-      'herbata',
-      'kakao',
-      'bulion'
-    ],
-    avgPrice: 5.0
+    keywords: [],
+    avgPrice: 7.0
   }
 ];
 
-/**
- * Szacuje koszt koszyka na podstawie listy produktów oznaczonych jako "kupione".
- * @param {Array} items - elementy z listy zakupów (z bazy `shopping`)
- * @returns {{ totalEstimate: number, count: number, byCategory: Array }}
- */
-function estimateBasketFromShoppingList(items) {
-  const matches = [];
+function normalize(text) {
+  if (!text) return '';
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
 
-  (items || []).forEach(item => {
-    const name = `${item.name || ''} ${item.brand || ''}`.toLowerCase().trim();
-    if (!name) return;
+function getCategoryForName(name, brand) {
+  const full = normalize(`${name || ''} ${brand || ''}`);
 
-    // znajdź pierwszą regułę, której jakiekolwiek słowo kluczowe występuje w nazwie
-    const rule = AI_PRICE_RULES.find(r =>
-      r.keywords.some(k => name.includes(k))
-    );
-
-    if (rule) {
-      matches.push({ item, rule });
+  for (const rule of AI_PRICE_RULES) {
+    if (
+      rule.keywords.some(keyword => full.includes(normalize(keyword)))
+    ) {
+      return rule;
     }
-  });
-
-  // jeśli nic nie dopasowaliśmy – brak danych do szacowania
-  if (!matches.length) {
-    return {
-      totalEstimate: 0,
-      count: 0,
-      byCategory: []
-    };
   }
 
-  const totalEstimate = matches.reduce(
-    (sum, m) => sum + (m.rule.avgPrice || 0),
-    0
-  );
-  const count = matches.length;
+  // Fallback – jeśli nic nie pasuje, wrzucamy do "Inne"
+  return AI_PRICE_RULES.find(r => r.category === 'Inne') || AI_PRICE_RULES[AI_PRICE_RULES.length - 1];
+}
 
-  // zliczanie po kategoriach
-  const byCatMap = new Map();
-  matches.forEach(m => {
-    const key = m.rule.category;
-    const prev =
-      byCatMap.get(key) || {
-        label: m.rule.category,
-        emoji: m.rule.emoji,
-        estimate: 0
-      };
-    prev.estimate += m.rule.avgPrice || 0;
-    byCatMap.set(key, prev);
+function estimateBasketFromShoppingList(items) {
+  if (!Array.isArray(items) || !items.length) {
+    return { totalEstimate: 0, count: 0, byCategory: [] };
+  }
+
+  const byCategoryMap = new Map();
+  let totalEstimate = 0;
+  let count = 0;
+
+  items.forEach(item => {
+    const rule = getCategoryForName(item.name, item.brand);
+    const price = rule.avgPrice || 0;
+    totalEstimate += price;
+    count += 1;
+
+    const key = rule.category;
+    const existing = byCategoryMap.get(key) || {
+      category: rule.category,
+      emoji: rule.emoji,
+      items: 0,
+      estimate: 0
+    };
+    existing.items += 1;
+    existing.estimate += price;
+    byCategoryMap.set(key, existing);
   });
 
-  const byCategory = Array.from(byCatMap.values())
+  const byCategory = Array.from(byCategoryMap.values())
     .map(cat => ({
       ...cat,
-      share: totalEstimate
-        ? Math.round((cat.estimate / totalEstimate) * 100)
-        : 0
+      estimate: Math.round(cat.estimate),
+      share:
+        totalEstimate > 0
+          ? Math.round((cat.estimate / totalEstimate) * 100)
+          : 0
     }))
     .sort((a, b) => b.estimate - a.estimate);
 
   return {
-    totalEstimate,
+    totalEstimate: Math.round(totalEstimate),
     count,
     byCategory
   };
 }
 
-// Wystawiamy w globalnym obiekcie
 window.FoodWatchAI = {
+  getCategoryForName,
   estimateBasketFromShoppingList
 };

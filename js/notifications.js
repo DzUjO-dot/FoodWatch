@@ -1,7 +1,22 @@
 // js/notifications.js
-// Obsługa powiadomień i prosta historia alertów FoodWatch
+// Powiadomienia + historia alertów (osobno od historii operacji w IndexedDB)
 
 const ALERT_STORAGE_KEY = 'foodwatchAlerts';
+let notificationPermissionChecked = false;
+
+// Ustawienia powiadomień (nadpisywane z Ustawień)
+let notificationSettings = {
+  notifyExpired: true,
+  notifySoon: true,
+  soonDaysThreshold: 3
+};
+
+function setNotificationSettings(newSettings) {
+  notificationSettings = {
+    ...notificationSettings,
+    ...newSettings
+  };
+}
 
 function getAlertHistory() {
   try {
@@ -23,7 +38,7 @@ function addAlertHistoryEntry(expired, soon) {
     soon
   };
   history.unshift(entry);
-  const trimmed = history.slice(0, 5);
+  const trimmed = history.slice(0, 20); // przechowujemy max 20, wyświetlamy 5
   try {
     localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(trimmed));
   } catch (e) {
@@ -37,7 +52,20 @@ async function requestNotificationPermission() {
     return false;
   }
 
+  if (Notification.permission === 'granted') {
+    notificationPermissionChecked = true;
+    return true;
+  }
+  if (Notification.permission === 'denied') {
+    notificationPermissionChecked = true;
+    return false;
+  }
+  if (notificationPermissionChecked) {
+    return Notification.permission === 'granted';
+  }
+
   const perm = await Notification.requestPermission();
+  notificationPermissionChecked = true;
   return perm === 'granted';
 }
 
@@ -48,10 +76,16 @@ async function showExpiryNotification(expiredCount, soonCount) {
   if (!reg) return;
 
   const bodyParts = [];
-  if (expiredCount > 0) bodyParts.push(`Przeterminowane: ${expiredCount}`);
-  if (soonCount > 0) bodyParts.push(`Kończą się wkrótce: ${soonCount} (≤3 dni)`);
+  if (expiredCount > 0 && notificationSettings.notifyExpired) {
+    bodyParts.push(`Przeterminowane: ${expiredCount}`);
+  }
+  if (soonCount > 0 && notificationSettings.notifySoon) {
+    bodyParts.push(
+      `Kończą się wkrótce: ${soonCount} (≤${notificationSettings.soonDaysThreshold} dni)`
+    );
+  }
 
-  if (bodyParts.length === 0) return;
+  if (!bodyParts.length) return;
 
   reg.showNotification('FoodWatch – ważne produkty', {
     body: bodyParts.join(' | '),
@@ -60,66 +94,67 @@ async function showExpiryNotification(expiredCount, soonCount) {
   });
 }
 
-// Wywoływane z app.js
+// Główna funkcja wywoływana z app.js
 async function checkExpirationsAndNotify() {
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
-  if (!window.PantryDB) return;
+  if (!window.PantryDB || !PantryDB.getAllProducts) return;
   const products = await window.PantryDB.getAllProducts();
-  const shoppingList = window.PantryDB.getShoppingList
-    ? await window.PantryDB.getShoppingList()
-    : [];
 
   let expired = 0;
   let soon = 0;
   const now = new Date();
+  const soonThreshold = notificationSettings.soonDaysThreshold ?? 3;
+  const toAutoMove = [];
 
-  for (const p of products) {
-    if (!p.expiry) continue;
+  products.forEach(p => {
+    if (!p.expiry) return;
     const d = new Date(p.expiry + 'T00:00:00');
-    const diff = Math.floor((d - now) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((d - now) / (1000 * 60 * 60 * 24));
 
-    if (diff < 0) {
-      expired++;
-
-      // Automatyczne dodanie do listy zakupów, jeśli nie ma już pozycji "pending" dla tego produktu
-      if (window.PantryDB && window.PantryDB.addToShoppingList) {
-        const already = shoppingList.some(
-          s =>
-            s.status !== 'done' &&
-            ((s.barcode && p.barcode && s.barcode === p.barcode) ||
-              (s.name && p.name && s.name === p.name))
-        );
-
-        if (!already) {
-          try {
-            await window.PantryDB.addToShoppingList({
-              name: p.name || 'Produkt bez nazwy',
-              brand: p.brand || null,
-              barcode: p.barcode || null,
-              quantity: 1,
-              source: 'expired',
-              addedAt: new Date().toISOString()
-            });
-          } catch (e) {
-            console.warn(
-              'Nie udało się dodać przeterminowanego produktu do listy zakupów:',
-              e
-            );
-          }
-        }
+    if (diffDays < 0) {
+      expired += 1;
+      if (!p.autoMovedToShopping) {
+        toAutoMove.push(p);
       }
-    } else if (diff <= 3) {
-      soon++;
+    } else if (diffDays <= soonThreshold) {
+      soon += 1;
     }
+  });
+
+  if (expired > 0 || soon > 0) {
+    addAlertHistoryEntry(expired, soon);
+    await showExpiryNotification(expired, soon);
   }
 
-  addAlertHistoryEntry(expired, soon);
-  await showExpiryNotification(expired, soon);
+  // Automatyczne przeniesienie przeterminowanych na listę zakupów
+  for (const p of toAutoMove) {
+    await PantryDB.addToShoppingList({
+      name: p.name,
+      brand: p.brand,
+      barcode: p.barcode,
+      source: 'expired_auto',
+      linkedProductId: p.id
+    });
+    await PantryDB.updateProduct({ ...p, autoMovedToShopping: true });
+    await PantryDB.addHistoryEntry({
+      type: 'PRODUCT_EXPIRED_TO_SHOPPING',
+      message: 'Produkt przeterminowany – przeniesiono na listę zakupów',
+      productName: p.name,
+      productBrand: p.brand,
+      expiry: p.expiry
+    });
+  }
 }
 
-window.checkExpirationsAndNotify = checkExpirationsAndNotify;
+window.FoodWatchNotifications = {
+  checkExpirationsAndNotify,
+  getAlertHistory,
+  setNotificationSettings
+};
+
+// Alias dla starej nazwy używanej w app.js (na wszelki wypadek)
 window.FoodWatchAlerts = {
   getAlertHistory
 };

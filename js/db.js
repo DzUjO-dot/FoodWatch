@@ -1,5 +1,5 @@
 // js/db.js
-// Warstwa nad IndexedDB dla FoodWatch – produkty, lista zakupów, historia działań
+// Warstwa nad IndexedDB dla FoodWatch: produkty, zakupy, historia działań
 
 const DB_NAME = 'foodwatch-db';
 const DB_VERSION = 3;
@@ -14,7 +14,7 @@ function openDb() {
     request.onupgradeneeded = event => {
       const db = event.target.result;
 
-      // Produkty
+      // Produkty w spiżarni
       if (!db.objectStoreNames.contains('products')) {
         const store = db.createObjectStore('products', {
           keyPath: 'id',
@@ -27,15 +27,13 @@ function openDb() {
 
       // Lista zakupów
       if (!db.objectStoreNames.contains('shopping')) {
-        const shoppingStore = db.createObjectStore('shopping', {
+        db.createObjectStore('shopping', {
           keyPath: 'id',
           autoIncrement: true
         });
-        shoppingStore.createIndex('by_status', 'status', { unique: false });
-        shoppingStore.createIndex('by_addedAt', 'addedAt', { unique: false });
       }
 
-      // Historia działań
+      // Historia operacji
       if (!db.objectStoreNames.contains('history')) {
         const historyStore = db.createObjectStore('history', {
           keyPath: 'id',
@@ -52,130 +50,122 @@ function openDb() {
   return dbPromise;
 }
 
+// ===== Helpery ogólne =====
+
+async function getAllFromStore(storeName) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readonly');
+    const store = tx.objectStore(storeName);
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function putToStore(storeName, value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).put(value);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
+async function addToStore(storeName, value) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    const req = tx.objectStore(storeName).add(value);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function deleteFromStore(storeName, id) {
+  const db = await openDb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(storeName, 'readwrite');
+    tx.objectStore(storeName).delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 // ===== Produkty =====
 
 async function addProduct(product) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('products', 'readwrite');
-    const store = tx.objectStore('products');
-    const data = {
-      ...product
-    };
-    store.add(data);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  const withMeta = {
+    ...product,
+    createdAt: product.createdAt || new Date().toISOString()
+  };
+  await addToStore('products', withMeta);
 }
 
 async function getAllProducts() {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('products', 'readonly');
-    const req = tx.objectStore('products').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
+  return getAllFromStore('products');
 }
 
 async function updateProduct(product) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('products', 'readwrite');
-    tx.objectStore('products').put(product);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await putToStore('products', product);
 }
 
 async function deleteProduct(id) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('products', 'readwrite');
-    tx.objectStore('products').delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await deleteFromStore('products', id);
 }
 
-// ===== Lista zakupów =====
+// ===== Zakupy =====
 
 async function addToShoppingList(item) {
-  const db = await openDb();
-  const base = {
-    name: item.name || '',
-    brand: item.brand || '',
-    barcode: item.barcode || null,
-    source: item.source || 'manual', // manual | used | expired
-    status: item.status || 'pending', // pending | done
-    addedAt: item.addedAt || new Date().toISOString(),
-    doneAt: item.doneAt || null,
-    category: item.category || null
+  const withMeta = {
+    ...item,
+    status: item.status || 'todo',
+    createdAt: item.createdAt || new Date().toISOString(),
+    boughtAt: item.boughtAt || null
   };
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('shopping', 'readwrite');
-    tx.objectStore('shopping').add(base);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await addToStore('shopping', withMeta);
 }
 
 async function getShoppingList() {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('shopping', 'readonly');
-    const req = tx.objectStore('shopping').getAll();
-    req.onsuccess = () => resolve(req.result || []);
-    req.onerror = () => reject(req.error);
-  });
+  return getAllFromStore('shopping');
 }
 
 async function updateShoppingItem(item) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('shopping', 'readwrite');
-    tx.objectStore('shopping').put(item);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await putToStore('shopping', item);
 }
 
 async function deleteShoppingItem(id) {
-  const db = await openDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction('shopping', 'readwrite');
-    tx.objectStore('shopping').delete(id);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
+  await deleteFromStore('shopping', id);
 }
 
-// ===== Historia działań =====
+// ===== Historia =====
 
 async function addHistoryEntry(entry) {
-  const db = await openDb();
-  const data = {
-    type: entry.type || 'info',
-    message: entry.message || '',
+  const withMeta = {
+    ...entry,
     createdAt: entry.createdAt || new Date().toISOString()
   };
-
+  const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('history', 'readwrite');
-    tx.objectStore('history').add(data);
+    tx.objectStore('history').add(withMeta);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-async function getHistoryEntries(limit = 50) {
+async function getHistory(limit = 100) {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction('history', 'readonly');
-    const store = tx.objectStore('history').index('by_createdAt');
-    const req = store.getAll();
-
+    const store = tx.objectStore('history');
+    let req;
+    if (store.indexNames.contains('by_createdAt')) {
+      req = store.index('by_createdAt').getAll();
+    } else {
+      req = store.getAll();
+    }
     req.onsuccess = () => {
       const all = (req.result || []).sort((a, b) =>
         (b.createdAt || '').localeCompare(a.createdAt || '')
@@ -196,5 +186,5 @@ window.PantryDB = {
   updateShoppingItem,
   deleteShoppingItem,
   addHistoryEntry,
-  getHistoryEntries
+  getHistory
 };
