@@ -1,5 +1,4 @@
-// js/aiPriceAgent.js
-// Prosty „pseudo-AI” do szacowania kosztu koszyka i kategoryzacji produktów.
+// Szacowanie kosztu koszyka i kategoryzacja
 
 const AI_PRICE_RULES = [
   {
@@ -20,7 +19,11 @@ const AI_PRICE_RULES = [
       'serek wiejski',
       'serek homogenizowany',
       'masło',
-      'margaryna'
+      'margaryna',
+      'jajko',
+      'jajka',
+      'egg',
+      'eggs'
     ],
     avgPrice: 4.5
   },
@@ -198,7 +201,6 @@ function getCategoryForName(name, brand) {
     }
   }
 
-  // Fallback – jeśli nic nie pasuje, wrzucamy do "Inne"
   return AI_PRICE_RULES.find(r => r.category === 'Inne') || AI_PRICE_RULES[AI_PRICE_RULES.length - 1];
 }
 
@@ -213,9 +215,10 @@ function estimateBasketFromShoppingList(items) {
 
   items.forEach(item => {
     const rule = getCategoryForName(item.name, item.brand);
-    const price = rule.avgPrice || 0;
+    const qty = Number(item.quantity) > 0 ? Number(item.quantity) : 1;
+    const price = (rule.avgPrice || 0) * qty;
     totalEstimate += price;
-    count += 1;
+    count += qty;
 
     const key = rule.category;
     const existing = byCategoryMap.get(key) || {
@@ -224,7 +227,7 @@ function estimateBasketFromShoppingList(items) {
       items: 0,
       estimate: 0
     };
-    existing.items += 1;
+    existing.items += qty;
     existing.estimate += price;
     byCategoryMap.set(key, existing);
   });

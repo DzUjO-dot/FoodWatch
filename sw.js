@@ -1,4 +1,4 @@
-// sw.js
+// Service worker cache
 const CACHE_NAME = 'foodwatch-cache-v2';
 const OFFLINE_URLS = [
   'index.html',
@@ -34,7 +34,6 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // OpenFoodFacts – network-first
   if (url.hostname.includes('openfoodfacts')) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(event.request))
@@ -42,7 +41,6 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Reszta – cache-first
   event.respondWith(
     caches.match(event.request).then(response => {
       return (

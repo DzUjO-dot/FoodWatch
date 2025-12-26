@@ -82,7 +82,7 @@ const defaultSettings = {
   soonDaysThreshold: 3,
   checkIntervalHours: 12,
   theme: "auto", // auto / light / dark
-  shelfPresets: "A1;A2;Lodówka;Zamrażarka",
+  shelfPresets: "Lodówka;Półka A1",
 };
 
 function loadSettings() {
@@ -246,6 +246,8 @@ const searchExistingResults = document.getElementById(
 );
 const searchExistingStatus = document.getElementById("search-existing-status");
 let searchExistingTimeout = null;
+let searchExistingController = null;
+const searchExistingCache = new Map();
 
 // ====== Status daty ważności ======
 function expiryStatus(dateStr, soonDaysOverride) {
@@ -302,8 +304,70 @@ if (btnFetchProduct) {
 }
 
 // ====== Wyszukiwanie OpenFoodFacts po nazwie ======
+function renderOffSearchResults(products) {
+  searchExistingResults.innerHTML = "";
+
+  if (!products.length) {
+    searchExistingStatus.textContent = "Brak wyników – spróbuj inną frazę.";
+    return;
+  }
+
+  searchExistingStatus.textContent = "Wybierz produkt z listy:";
+
+  products.forEach((p) => {
+    const li = document.createElement("li");
+    li.className = "list-item list-item--compact";
+    const name = p.product_name || "Bez nazwy";
+    const brand = p.brands || "";
+    const code = p.code || "";
+    const qty = p.quantity || "";
+
+    li.innerHTML = `
+      <div class="list-item-main">
+        <div class="list-item-title-row">
+          <strong>${name}</strong>
+          <span class="product-brand">${brand || "brak marki"}</span>
+        </div>
+        <div class="list-item-extra">
+          Kod: ${code || "brak"}${qty ? " - Opakowanie: " + qty : ""}
+        </div>
+      </div>
+    `;
+
+    li.addEventListener("click", async () => {
+      inputName.value = name;
+      inputBrand.value = brand;
+      inputBarcode.value = code;
+      searchExistingResults.innerHTML = "";
+      searchExistingStatus.textContent = "Wybrano produkt z OpenFoodFacts.";
+      await PantryDB.addHistoryEntry({
+        type: "OFF_SEARCH_PICKED_RESULT",
+        message: "Wybrano produkt z wyników wyszukiwarki",
+        productName: name,
+        productBrand: brand,
+        barcode: code,
+      });
+    });
+
+    searchExistingResults.appendChild(li);
+  });
+}
+
 async function performOffSearchByName(query) {
   if (!query || query.length < 3) return;
+
+  const normalizedQuery = query.toLowerCase();
+  const cached = searchExistingCache.get(normalizedQuery);
+  if (cached) {
+    searchExistingStatus.textContent = "Wyniki z pamięci podręcznej.";
+    renderOffSearchResults(cached);
+    return;
+  }
+
+  if (searchExistingController) {
+    searchExistingController.abort();
+  }
+  searchExistingController = new AbortController();
 
   searchExistingStatus.textContent = "Wyszukiwanie w OpenFoodFacts...";
   searchExistingResults.innerHTML = "";
@@ -320,9 +384,11 @@ async function performOffSearchByName(query) {
         fields: "product_name,brands,code,quantity",
       }).toString();
 
-    const res = await fetch(url);
+    const res = await fetch(url, { signal: searchExistingController.signal });
     const data = await res.json();
     const products = data.products || [];
+
+    searchExistingCache.set(normalizedQuery, products);
 
     await PantryDB.addHistoryEntry({
       type: "OFF_SEARCH_NAME",
@@ -331,51 +397,11 @@ async function performOffSearchByName(query) {
       resultsCount: products.length,
     });
 
-    if (!products.length) {
-      searchExistingStatus.textContent = "Brak wyników – spróbuj inną frazę.";
+    renderOffSearchResults(products);
+  } catch (e) {
+    if (e.name === "AbortError") {
       return;
     }
-
-    searchExistingStatus.textContent = "Wybierz produkt z listy:";
-
-    products.forEach((p) => {
-      const li = document.createElement("li");
-      li.className = "list-item list-item--compact";
-      const name = p.product_name || "Bez nazwy";
-      const brand = p.brands || "";
-      const code = p.code || "";
-      const qty = p.quantity || "";
-
-      li.innerHTML = `
-        <div class="list-item-main">
-          <div class="list-item-title-row">
-            <strong>${name}</strong>
-            <span class="product-brand">${brand || "brak marki"}</span>
-          </div>
-          <div class="list-item-extra">
-            Kod: ${code || "brak"}${qty ? " · Opakowanie: " + qty : ""}
-          </div>
-        </div>
-      `;
-
-      li.addEventListener("click", async () => {
-        inputName.value = name;
-        inputBrand.value = brand;
-        inputBarcode.value = code;
-        searchExistingResults.innerHTML = "";
-        searchExistingStatus.textContent = "Wybrano produkt z OpenFoodFacts.";
-        await PantryDB.addHistoryEntry({
-          type: "OFF_SEARCH_PICKED_RESULT",
-          message: "Wybrano produkt z wyników wyszukiwarki",
-          productName: name,
-          productBrand: brand,
-          barcode: code,
-        });
-      });
-
-      searchExistingResults.appendChild(li);
-    });
-  } catch (e) {
     console.error(e);
     searchExistingStatus.textContent =
       "Błąd podczas wyszukiwania. Sprawdź połączenie.";
@@ -698,9 +724,10 @@ async function renderShopping() {
       estimate.byCategory.forEach((cat) => {
         const div = document.createElement("div");
         div.className = "shopping-ai-chip";
-        div.textContent = `${cat.emoji} ${cat.label}: ~${Math.round(
-          cat.estimate
-        )} zł (${cat.share}%)`;
+        const estimateValue = Math.round(cat.estimate);
+        const itemsLabel =
+          cat.items && cat.items > 1 ? ` · ${cat.items} szt.` : "";
+        div.textContent = `${cat.emoji} ${cat.category}: ~${estimateValue} zł (${cat.share}%)${itemsLabel}`;
         shoppingAiBreakdown.appendChild(div);
       });
     }
@@ -850,7 +877,7 @@ if (btnShoppingNearby) {
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const url = `https://www.google.com/maps/search/sklep+spożywczy/@${latitude},${longitude},15z`;
-        window.open(url, "_blank");
+        window.open(url, "_blank");a
       },
       (err) => {
         console.error(err);
@@ -1027,11 +1054,33 @@ const ZERO_WASTE_USED_TYPES = [
 const ZERO_WASTE_EXPIRED_TYPES = ["PRODUCT_EXPIRED_TO_SHOPPING"];
 
 const IDEAS_BY_CATEGORY = {
-  Nabiał: ["Naleśniki z twarogiem", "Makaron w sosie śmietanowym"],
-  Pieczywo: ["Grzanki z czosnkiem", "Zapiekanki z pieczywa"],
-  Warzywa: ["Zupa krem z warzyw", "Leczo warzywne"],
-  Owoce: ["Sałatka owocowa", "Smoothie owocowe"],
-  "Słodycze i przekąski": ["Deser warstwowy", "Domowe lody z dodatkami"],
+  "Nabiał": [
+    "Naleśniki z twarogiem",
+    "Makaron w sosie śmietanowym",
+    "Jajecznica z warzywami",
+    "Shakshuka z jajkami"
+  ],
+  "Pieczywo": [
+    "Grzanki z czosnkiem",
+    "Zapiekanki z pieczywa"
+  ],
+  "Warzywa": [
+    "Zupa krem z warzyw",
+    "Leczo warzywne"
+  ],
+  "Owoce": [
+    "Sałatka owocowa",
+    "Smoothie owocowe"
+  ],
+  "Słodycze i przekąski": [
+    "Deser warstwowy",
+    "Domowe lody z dodatkami"
+  ],
+  "Inne": [
+    "Omlet z resztek warzyw",
+    "Frittata piekarnikowa",
+    "Makaron z tym, co zostało w lodówce"
+  ]
 };
 
 async function renderStats() {

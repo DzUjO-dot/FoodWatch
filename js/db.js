@@ -1,5 +1,4 @@
-// js/db.js
-// Warstwa nad IndexedDB dla FoodWatch: produkty, zakupy, historia działań
+// Baza danych IndexedDB
 
 const DB_NAME = 'foodwatch-db';
 const DB_VERSION = 3;
@@ -14,7 +13,6 @@ function openDb() {
     request.onupgradeneeded = event => {
       const db = event.target.result;
 
-      // Produkty w spiżarni
       if (!db.objectStoreNames.contains('products')) {
         const store = db.createObjectStore('products', {
           keyPath: 'id',
@@ -25,7 +23,6 @@ function openDb() {
         store.createIndex('by_location', 'location', { unique: false });
       }
 
-      // Lista zakupów
       if (!db.objectStoreNames.contains('shopping')) {
         db.createObjectStore('shopping', {
           keyPath: 'id',
@@ -33,7 +30,6 @@ function openDb() {
         });
       }
 
-      // Historia operacji
       if (!db.objectStoreNames.contains('history')) {
         const historyStore = db.createObjectStore('history', {
           keyPath: 'id',
@@ -50,7 +46,7 @@ function openDb() {
   return dbPromise;
 }
 
-// ===== Helpery ogólne =====
+// Pomocnicze operacje
 
 async function getAllFromStore(storeName) {
   const db = await openDb();
@@ -93,7 +89,7 @@ async function deleteFromStore(storeName, id) {
   });
 }
 
-// ===== Produkty =====
+// Produkty
 
 async function addProduct(product) {
   const withMeta = {
@@ -115,7 +111,7 @@ async function deleteProduct(id) {
   await deleteFromStore('products', id);
 }
 
-// ===== Zakupy =====
+// Zakupy
 
 async function addToShoppingList(item) {
   const withMeta = {
@@ -139,7 +135,7 @@ async function deleteShoppingItem(id) {
   await deleteFromStore('shopping', id);
 }
 
-// ===== Historia =====
+// Historia
 
 async function addHistoryEntry(entry) {
   const withMeta = {

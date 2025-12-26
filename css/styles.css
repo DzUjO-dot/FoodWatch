@@ -608,6 +608,20 @@ input::placeholder {
   border: 1px solid rgba(15, 23, 42, 0.9);
 }
 
+#html5qr-reader {
+  width: 100%;
+}
+
+#html5qr-reader video,
+#html5qr-reader canvas {
+  width: 100%;
+  max-height: 260px;
+  border-radius: 0.9rem;
+  background: #020617;
+  object-fit: cover;
+  border: 1px solid rgba(15, 23, 42, 0.9);
+}
+
 #scanner-info {
   font-size: 0.78rem;
   color: var(--color-subtle);

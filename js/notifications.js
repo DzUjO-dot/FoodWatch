@@ -1,10 +1,8 @@
-// js/notifications.js
-// Powiadomienia + historia alertów (osobno od historii operacji w IndexedDB)
+// Powiadomienia i historia alertów
 
 const ALERT_STORAGE_KEY = 'foodwatchAlerts';
 let notificationPermissionChecked = false;
 
-// Ustawienia powiadomień (nadpisywane z Ustawień)
 let notificationSettings = {
   notifyExpired: true,
   notifySoon: true,
@@ -38,7 +36,7 @@ function addAlertHistoryEntry(expired, soon) {
     soon
   };
   history.unshift(entry);
-  const trimmed = history.slice(0, 20); // przechowujemy max 20, wyświetlamy 5
+  const trimmed = history.slice(0, 20);
   try {
     localStorage.setItem(ALERT_STORAGE_KEY, JSON.stringify(trimmed));
   } catch (e) {
@@ -94,8 +92,11 @@ async function showExpiryNotification(expiredCount, soonCount) {
   });
 }
 
-// Główna funkcja wywoływana z app.js
 async function checkExpirationsAndNotify() {
+  if (!notificationSettings.notifyExpired && !notificationSettings.notifySoon) {
+    return;
+  }
+
   const granted = await requestNotificationPermission();
   if (!granted) return;
 
@@ -105,12 +106,14 @@ async function checkExpirationsAndNotify() {
   let expired = 0;
   let soon = 0;
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
   const soonThreshold = notificationSettings.soonDaysThreshold ?? 3;
   const toAutoMove = [];
 
   products.forEach(p => {
     if (!p.expiry) return;
     const d = new Date(p.expiry + 'T00:00:00');
+    d.setHours(0, 0, 0, 0);
     const diffDays = Math.floor((d - now) / (1000 * 60 * 60 * 24));
 
     if (diffDays < 0) {
@@ -128,7 +131,6 @@ async function checkExpirationsAndNotify() {
     await showExpiryNotification(expired, soon);
   }
 
-  // Automatyczne przeniesienie przeterminowanych na listę zakupów
   for (const p of toAutoMove) {
     await PantryDB.addToShoppingList({
       name: p.name,
@@ -154,7 +156,6 @@ window.FoodWatchNotifications = {
   setNotificationSettings
 };
 
-// Alias dla starej nazwy używanej w app.js (na wszelki wypadek)
 window.FoodWatchAlerts = {
   getAlertHistory
 };
