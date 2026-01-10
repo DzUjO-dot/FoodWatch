@@ -1,7 +1,7 @@
 {
   "name": "FoodWatch",
   "short_name": "FoodWatch",
-  "start_url": "./index.html",
+  "start_url": "https://dzujo-dot.github.io/FoodWatch/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
