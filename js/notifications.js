@@ -93,13 +93,6 @@ async function showExpiryNotification(expiredCount, soonCount) {
 }
 
 async function checkExpirationsAndNotify() {
-  if (!notificationSettings.notifyExpired && !notificationSettings.notifySoon) {
-    return;
-  }
-
-  const granted = await requestNotificationPermission();
-  if (!granted) return;
-
   if (!window.PantryDB || !PantryDB.getAllProducts) return;
   const products = await window.PantryDB.getAllProducts();
 
@@ -128,7 +121,17 @@ async function checkExpirationsAndNotify() {
 
   if (expired > 0 || soon > 0) {
     addAlertHistoryEntry(expired, soon);
-    await showExpiryNotification(expired, soon);
+  }
+
+  const shouldNotify =
+    (notificationSettings.notifyExpired && expired > 0) ||
+    (notificationSettings.notifySoon && soon > 0);
+
+  if (shouldNotify) {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      await showExpiryNotification(expired, soon);
+    }
   }
 
   for (const p of toAutoMove) {
