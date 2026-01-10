@@ -1,18 +1,20 @@
 {
   "name": "FoodWatch",
   "short_name": "FoodWatch",
-  "start_url": "https://dzujo-dot.github.io/FoodWatch/",
+  "id": "/FoodWatch/",
+  "start_url": "/FoodWatch/?source=pwa",
+  "scope": "/FoodWatch/",
   "display": "standalone",
   "background_color": "#0f172a",
   "theme_color": "#1e293b",
   "icons": [
     {
-      "src": "img/foodwatch-icon-192.png",
+      "src": "/FoodWatch/img/foodwatch-icon-192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "img/foodwatch-icon-512.png",
+      "src": "/FoodWatch/img/foodwatch-icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
