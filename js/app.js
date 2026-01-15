@@ -873,14 +873,26 @@ if (btnShoppingNearby) {
       alert("Wymagane jest połączenie z internetem, aby otworzyć mapę.");
       return;
     }
+    
+    // Otwieramy okno od razu (synchronicznie), aby uniknąć blokowania popup na mobile
+    const newWindow = window.open("about:blank", "_blank");
+    
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const url = `https://www.google.com/maps/search/sklep+spożywczy/@${latitude},${longitude},15z`;
-        window.open(url, "_blank");a
+        if (newWindow) {
+          newWindow.location.href = url;
+        } else {
+          // Fallback jeśli popup został zablokowany
+          window.location.href = url;
+        }
       },
       (err) => {
         console.error(err);
+        if (newWindow) {
+          newWindow.close();
+        }
         alert("Nie udało się pobrać lokalizacji.");
       }
     );

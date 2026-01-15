@@ -8,8 +8,8 @@ const OFFLINE_URLS = [
   'js/scanner.js',
   'js/notifications.js',
   'js/aiPriceAgent.js',
-  'img/icon-192.png',
-  'img/icon-512.png'
+  'img/foodwatch-icon-192.png',
+  'img/foodwatch-icon-512.png'
 ];
 
 self.addEventListener('install', event => {
