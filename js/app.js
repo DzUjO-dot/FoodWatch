@@ -874,8 +874,22 @@ if (btnShoppingNearby) {
       return;
     }
     
-    // Najpierw pobieramy lokalizację, potem otwieramy mapę
-    // Pokazujemy informację o ładowaniu
+    // Na mobile window.open() musi być wywołane bezpośrednio w reakcji na kliknięcie,
+    // nie w callbacku geolokalizacji - inaczej przeglądarka blokuje jako popup.
+    // Dlatego otwieramy okno od razu, a potem ustawiamy URL po otrzymaniu lokalizacji.
+    
+    // Wykrywamy czy to urządzenie mobilne
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    
+    // Na mobile otwieramy okno od razu (w reakcji na kliknięcie)
+    let mapWindow = null;
+    if (isMobile) {
+      mapWindow = window.open("", "_blank");
+      if (mapWindow) {
+        mapWindow.document.write('<html><head><title>Ładowanie mapy...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f5;"><p>Pobieranie lokalizacji...</p></body></html>');
+      }
+    }
+    
     btnShoppingNearby.disabled = true;
     const originalText = btnShoppingNearby.textContent;
     btnShoppingNearby.textContent = "Lokalizowanie...";
@@ -885,22 +899,32 @@ if (btnShoppingNearby) {
         const { latitude, longitude } = pos.coords;
         const url = `https://www.google.com/maps/search/sklep+spożywczy/@${latitude},${longitude},15z`;
         
-        // Przywracamy przycisk
         btnShoppingNearby.disabled = false;
         btnShoppingNearby.textContent = originalText;
         
-        // Otwieramy URL bezpośrednio - na mobile lepiej działa location.href
-        // Próbujemy otworzyć w nowej karcie, jeśli się nie uda - w tej samej
-        const newWindow = window.open(url, "_blank");
-        if (!newWindow || newWindow.closed) {
-          // Fallback dla przeglądarek blokujących popup
+        if (isMobile && mapWindow && !mapWindow.closed) {
+          // Na mobile - przekierowujemy już otwarte okno
+          mapWindow.location.href = url;
+        } else if (isMobile) {
+          // Fallback jeśli okno zostało zamknięte lub zablokowane
           window.location.href = url;
+        } else {
+          // Na desktopie - otwieramy normalnie
+          const newWindow = window.open(url, "_blank");
+          if (!newWindow || newWindow.closed) {
+            window.location.href = url;
+          }
         }
       },
       (err) => {
         console.error(err);
         btnShoppingNearby.disabled = false;
         btnShoppingNearby.textContent = originalText;
+        
+        // Zamykamy puste okno na mobile jeśli było otwarte
+        if (mapWindow && !mapWindow.closed) {
+          mapWindow.close();
+        }
         
         if (err.code === err.PERMISSION_DENIED) {
           alert("Dostęp do lokalizacji został zablokowany. Włącz lokalizację w ustawieniach przeglądarki.");
