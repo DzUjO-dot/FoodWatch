@@ -874,82 +874,8 @@ if (btnShoppingNearby) {
       return;
     }
     
-    // Na mobile window.open() musi być wywołane bezpośrednio w reakcji na kliknięcie,
-    // nie w callbacku geolokalizacji - inaczej przeglądarka blokuje jako popup.
-    // Dlatego otwieramy okno od razu, a potem ustawiamy URL po otrzymaniu lokalizacji.
-    
     // Wykrywamy czy to urządzenie mobilne
     const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-    
-    // Na mobile otwieramy okno od razu (w reakcji na kliknięcie)
-    let mapWindow = null;
-    if (isMobile) {
-      mapWindow = window.open("", "_blank");
-      if (mapWindow) {
-        mapWindow.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Ładowanie mapy...</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-      background: #f5f5f5;
-      text-align: center;
-      padding: 20px;
-      box-sizing: border-box;
-    }
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid #e0e0e0;
-      border-top-color: #4CAF50;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-    p {
-      color: #333;
-      font-size: 16px;
-      margin: 0 0 10px 0;
-    }
-    .hint {
-      color: #666;
-      font-size: 14px;
-      margin-top: 10px;
-    }
-    .close-btn {
-      margin-top: 30px;
-      padding: 12px 24px;
-      background: #f44336;
-      color: white;
-      border: none;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-  <div class="spinner"></div>
-  <p>Pobieranie lokalizacji...</p>
-  <p class="hint">Zezwól na dostęp do lokalizacji w wyskakującym okienku</p>
-  <button class="close-btn" onclick="window.close()">Anuluj</button>
-</body>
-</html>`);
-        mapWindow.document.close();
-      }
-    }
     
     btnShoppingNearby.disabled = true;
     const originalText = btnShoppingNearby.textContent;
@@ -963,14 +889,12 @@ if (btnShoppingNearby) {
         btnShoppingNearby.disabled = false;
         btnShoppingNearby.textContent = originalText;
         
-        if (isMobile && mapWindow && !mapWindow.closed) {
-          // Na mobile - przekierowujemy już otwarte okno
-          mapWindow.location.href = url;
-        } else if (isMobile) {
-          // Fallback jeśli okno zostało zamknięte lub zablokowane
+        if (isMobile) {
+          // Na mobile - przekierowujemy bieżącą kartę (nie otwieramy nowego okna)
+          // Dzięki temu prompt o lokalizację jest widoczny dla użytkownika
           window.location.href = url;
         } else {
-          // Na desktopie - otwieramy normalnie
+          // Na desktopie - otwieramy w nowej karcie
           const newWindow = window.open(url, "_blank");
           if (!newWindow || newWindow.closed) {
             window.location.href = url;
@@ -981,11 +905,6 @@ if (btnShoppingNearby) {
         console.error(err);
         btnShoppingNearby.disabled = false;
         btnShoppingNearby.textContent = originalText;
-        
-        // Zamykamy puste okno na mobile jeśli było otwarte
-        if (mapWindow && !mapWindow.closed) {
-          mapWindow.close();
-        }
         
         if (err.code === err.PERMISSION_DENIED) {
           alert("Dostęp do lokalizacji został zablokowany. Włącz lokalizację w ustawieniach przeglądarki.");
@@ -999,7 +918,7 @@ if (btnShoppingNearby) {
       },
       {
         enableHighAccuracy: false,
-        timeout: isMobile ? 30000 : 10000, // Dłuższy timeout na mobile (30s vs 10s)
+        timeout: 15000,
         maximumAge: 300000 // 5 minut cache
       }
     );
