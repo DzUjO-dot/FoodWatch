@@ -874,26 +874,48 @@ if (btnShoppingNearby) {
       return;
     }
     
-    // Otwieramy okno od razu (synchronicznie), aby uniknąć blokowania popup na mobile
-    const newWindow = window.open("about:blank", "_blank");
+    // Najpierw pobieramy lokalizację, potem otwieramy mapę
+    // Pokazujemy informację o ładowaniu
+    btnShoppingNearby.disabled = true;
+    const originalText = btnShoppingNearby.textContent;
+    btnShoppingNearby.textContent = "Lokalizowanie...";
     
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         const url = `https://www.google.com/maps/search/sklep+spożywczy/@${latitude},${longitude},15z`;
-        if (newWindow) {
-          newWindow.location.href = url;
-        } else {
-          // Fallback jeśli popup został zablokowany
+        
+        // Przywracamy przycisk
+        btnShoppingNearby.disabled = false;
+        btnShoppingNearby.textContent = originalText;
+        
+        // Otwieramy URL bezpośrednio - na mobile lepiej działa location.href
+        // Próbujemy otworzyć w nowej karcie, jeśli się nie uda - w tej samej
+        const newWindow = window.open(url, "_blank");
+        if (!newWindow || newWindow.closed) {
+          // Fallback dla przeglądarek blokujących popup
           window.location.href = url;
         }
       },
       (err) => {
         console.error(err);
-        if (newWindow) {
-          newWindow.close();
+        btnShoppingNearby.disabled = false;
+        btnShoppingNearby.textContent = originalText;
+        
+        if (err.code === err.PERMISSION_DENIED) {
+          alert("Dostęp do lokalizacji został zablokowany. Włącz lokalizację w ustawieniach przeglądarki.");
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          alert("Nie można określić lokalizacji. Sprawdź czy GPS jest włączony.");
+        } else if (err.code === err.TIMEOUT) {
+          alert("Przekroczono czas oczekiwania na lokalizację. Spróbuj ponownie.");
+        } else {
+          alert("Nie udało się pobrać lokalizacji.");
         }
-        alert("Nie udało się pobrać lokalizacji.");
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000 // 5 minut cache
       }
     );
   });
