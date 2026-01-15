@@ -886,7 +886,68 @@ if (btnShoppingNearby) {
     if (isMobile) {
       mapWindow = window.open("", "_blank");
       if (mapWindow) {
-        mapWindow.document.write('<html><head><title>Ładowanie mapy...</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f5f5f5;"><p>Pobieranie lokalizacji...</p></body></html>');
+        mapWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ładowanie mapy...</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      background: #f5f5f5;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid #e0e0e0;
+      border-top-color: #4CAF50;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    p {
+      color: #333;
+      font-size: 16px;
+      margin: 0 0 10px 0;
+    }
+    .hint {
+      color: #666;
+      font-size: 14px;
+      margin-top: 10px;
+    }
+    .close-btn {
+      margin-top: 30px;
+      padding: 12px 24px;
+      background: #f44336;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="spinner"></div>
+  <p>Pobieranie lokalizacji...</p>
+  <p class="hint">Zezwól na dostęp do lokalizacji w wyskakującym okienku</p>
+  <button class="close-btn" onclick="window.close()">Anuluj</button>
+</body>
+</html>`);
+        mapWindow.document.close();
       }
     }
     
@@ -938,7 +999,7 @@ if (btnShoppingNearby) {
       },
       {
         enableHighAccuracy: false,
-        timeout: 10000,
+        timeout: isMobile ? 30000 : 10000, // Dłuższy timeout na mobile (30s vs 10s)
         maximumAge: 300000 // 5 minut cache
       }
     );
