@@ -25,7 +25,6 @@
   --glass-blur: 18px;
 }
 
-/* Dark theme overrides */
 body[data-theme="dark"] {
   --bg-body: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
   --color-text: #e5e7eb;
@@ -125,7 +124,7 @@ body[data-theme="dark"] .header-pill {
 .header-pill-text {
   white-space: nowrap;
 }
-/* Status Online / Offline w pigułce nagłówka */
+/* ========== Status Online / Offline ========== */
 .header-pill--online .header-pill-dot {
   background: #22c55e;
   box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.22);
@@ -148,7 +147,7 @@ body[data-theme="dark"] .header-pill--offline .header-pill-text {
   color: #fee2e2;
 }
 
-/* NAV */
+/* ========== NAV ========== */
 
 .top-nav {
   display: flex;
@@ -224,7 +223,7 @@ body[data-theme="dark"] .header-pill--offline .header-pill-text {
   color: var(--color-subtle);
 }
 
-/* ANIMACJA */
+/* ========== ANIMACJA ========== */
 
 @keyframes fadeIn {
   from {
@@ -238,7 +237,6 @@ body[data-theme="dark"] .header-pill--offline .header-pill-text {
 }
 
 /* ========== CARD GRID & STATS ========== */
-/* ========== CARD GRID & STATS ========== */
 
 .card-grid {
   display: grid;
@@ -246,9 +244,6 @@ body[data-theme="dark"] .header-pill--offline .header-pill-text {
   gap: 0.75rem;
   margin-bottom: 1rem;
 }
-
-/* statyczne karty – to co już masz poniżej może zostać,
-   ważne żeby .card-grid pojawiło się NAD definicją .card */
 
 .card {
   padding: 0.9rem 1rem;
@@ -268,7 +263,7 @@ body[data-theme="dark"] .card {
   font-size: 0.95rem;
 }
 
-/* Stat cards */
+/* ========== STAT CARDS ========== */
 
 .card--stat .stat-value {
   margin: 0;
@@ -297,7 +292,7 @@ body[data-theme="dark"] .card {
   font-weight: 700;
 }
 
-/* Hover na desktopie */
+/* ========== HOVER ========== */
 
 @media (hover: hover) {
   .card:hover {
@@ -341,7 +336,7 @@ body[data-theme="dark"] .card {
   gap: 0.75rem;
 }
 
-/* Buttons */
+/* ========== BUTTONS ========== */
 
 button {
   font-family: inherit;
@@ -474,7 +469,7 @@ body[data-theme="dark"] .list-item {
   opacity: 0.7;
 }
 
-/* Badges */
+/* ========== BADGES ========== */
 
 .badge {
   display: inline-flex;
@@ -510,7 +505,7 @@ body[data-theme="dark"] .list-item {
   color: #374151;
 }
 
-/* Lokalizacja tag */
+/* ========== LOKALIZACJA ========== */
 
 .tag-location {
   padding: 0.1rem 0.5rem;
@@ -592,7 +587,7 @@ input::placeholder {
   margin: 0.15rem 0 0.5rem;
 }
 
-/* ========== SKANER ========== */
+/* ========== SCANNER ========== */
 
 .scanner-shell {
   margin-top: 0.2rem;
@@ -879,7 +874,7 @@ code {
   background: rgba(15, 23, 42, 0.06);
 }
 
-/* ========== RESPONSYWNOŚĆ ========== */
+/* ========== RESPONSIVE ========== */
 
 @media (max-width: 480px) {
   .app-header-main {
